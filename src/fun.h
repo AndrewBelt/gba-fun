@@ -2,7 +2,8 @@
 #define FUN_H
 
 typedef struct {
-  u8 px, py;
+  u32 frame;
+  u16 px, py;
 } game_t;
 
 extern game_t game;

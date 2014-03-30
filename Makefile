@@ -18,16 +18,16 @@ LDFLAGS := $(ARCH) $(SPECS) \
 
 TARGET = fun.gba
 OBJCOPY_FLAGS := -O elf32-littlearm -B arm
-GRIT_FLAGS := -gB4 -gzl -ftb
+GRIT_FLAGS := -pT4 -gB4 -Mw4 -Mh4 -ftb -fh! -Zr
 VBAM_FLAGS := --bios=../bios/gba.bin
 
-ASSETS := assets/fun.txt
+ASSETS := assets/fun.txt pokemon.pal.bin pokemon.img.bin
 SRCS := src/fun.c
 OBJECTS := $(SRCS:=.o)
 
 # Targets
 
-build: $(TARGET)
+build: assets/pokemon.gif.grit $(TARGET)
 
 %.elf: $(OBJECTS) assets.bin.o
 	arm-none-eabi-gcc $^ $(LDFLAGS) -o $@

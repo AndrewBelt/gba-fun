@@ -1,3 +1,6 @@
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <gba.h>
 #include "assets.h"
 #include "fun.h"
@@ -21,7 +24,7 @@ void gameRun()
 {
 	gameReset();
 	
-	for (u32 frame = 0;; frame++)
+	for (game.frame = 0;; game.frame++)
 	{
 		gameStep();
 		VBlankIntrWait();
@@ -31,39 +34,81 @@ void gameRun()
 void gameReset()
 {
 	// Set up video and backgrounds
-	REG_DISPCNT = MODE_0 | BG2_ON | OBJ_ON;
-	REG_BG2CNT = BG_PRIORITY(1) | CHAR_BASE(0) | BG_16_COLOR | SCREEN_BASE(31) | BG_SIZE(0);
+	REG_DISPCNT = MODE_0 | BG0_ON | OBJ_ON | OBJ_1D_MAP;
+	REG_BG0CNT = BG_PRIORITY(0) | CHAR_BASE(0) | BG_16_COLOR | SCREEN_BASE(30) | BG_SIZE(0);
 	
-	// Sprite palette
-	OBJ_COLORS[0] = RGB5(31, 0, 0);
-	OBJ_COLORS[1] = RGB5(0, 31, 0);
-	OBJ_COLORS[2] = RGB5(0, 0, 31);
+	// Set up background
+	for (u16 i = 0; i < 16; i++)
+		BG_COLORS[i] = RGB5(i, i, i);
 	
-	// Sprite tiles
-	for (u16 i = 0; i < 0x2000; i++)
-		SPRITE_GFX[i] = 0x0101;
+	for (u16 i = 0; i < 16*8*8/4; i++)
+		((u16*) CHAR_BASE_BLOCK(0))[i] = rand() & 0xffff;
 	
-	// Audio
+	for (u16 i = 0; i < 0x400; i++)
+		((u16*) SCREEN_BASE_BLOCK(30))[i] = (rand() & 0xf) | CHAR_PALETTE(0);
+	
+	// Set up sprite
+	RLUnCompVram((void*) &_binary_pokemon_pal_bin_start, OBJ_COLORS);
+	RLUnCompVram((void*) &_binary_pokemon_img_bin_start, SPRITE_GFX);
+	
+	// Hide all sprites
+	for (u16 i = 0; i < 128; i++)
+		OAM[i].attr0 = ATTR0_DISABLED;
+	
+	// Set up audio
 	SNDSTAT = SNDSTAT_ENABLE;
 	DMGSNDCTRL = DMGSNDCTRL_LVOL(7) | DMGSNDCTRL_RVOL(7) |
 		DMGSNDCTRL_LSQR2 | DMGSNDCTRL_RSQR2 | DMGSNTCTRL_LNOISE | DMGSNDCTRL_RNOISE;
 	DSOUNDCTRL = DSOUNDCTRL_DMG100;
 	
-	SQR2CTRL = 0 | SQR_DUTY(2) | 1<<8 | SQR_VOL(10);
+	SQR2CTRL = 0 | SQR_DUTY(3) | 1<<8 | SQR_VOL(5);
 	
-	// game
+	// Initialize game
 	game.px = 0; game.py = 0;
 }
 
 void gameStep()
 {
-	static const s16 speed = 3;
+	// Movement
+	const u16 keys = ~(REG_KEYINPUT);
+	const s8 speed = (keys & KEY_B) ? 4 : 2;
+	s8 dx = (!!(keys & KEY_RIGHT) - !!(keys & KEY_LEFT)) * speed;
+	s8 dy = (!!(keys & KEY_DOWN) - !!(keys & KEY_UP)) * speed;
 	
-	u16 keys = ~(REG_KEYINPUT);
-	game.px += (!!(keys & KEY_RIGHT) - !!(keys & KEY_LEFT)) * speed;
-	game.py += (!!(keys & KEY_DOWN) - !!(keys & KEY_UP)) * speed;
+	if ((dx || dy) && game.frame % 4 == 0) {
+		SQR2FREQ = 1<<15 | ((1<<11) - (1<<17)/440);
+	}
 	
-	OAM[0].attr0 = OBJ_Y(game.py) | OBJ_256_COLOR | ATTR0_SQUARE;
-	OAM[0].attr1 = OBJ_X(game.px) | ATTR1_SIZE_16;
-	OAM[0].attr2 = OBJ_CHAR(0) | OBJ_PRIORITY(0);
+	game.px += dx;
+	game.py += dy;
+	
+	REG_BG0HOFS = game.px;
+	REG_BG0VOFS = game.py;
+	
+	// Sprite tile
+	static u8 spriteAnimation = 0;
+	static u8 spriteFrame = 0;
+	
+	if (game.frame % 6 == 0)
+	{
+		spriteFrame++;
+		spriteFrame %= 4;
+	}
+	
+	if (dy > 0)
+		spriteAnimation = 0;
+	else if (dy < 0)
+		spriteAnimation = 3;
+	else if (dx < 0)
+		spriteAnimation = 1;
+	else if (dx > 0)
+		spriteAnimation = 2;
+	
+	// Set up sprite
+	static const u16 sx = (240 - 32) / 2;
+	static const u16 sy = (160 - 32) / 2;
+	const u16 spriteTile = (spriteAnimation * 4 + spriteFrame) * 4*4;
+	OAM[0].attr0 = OBJ_Y(sy) | OBJ_16_COLOR | ATTR0_SQUARE;
+	OAM[0].attr1 = OBJ_X(sx) | ATTR1_SIZE_32;
+	OAM[0].attr2 = OBJ_CHAR(spriteTile) | OBJ_PRIORITY(0) | OBJ_PALETTE(0);
 }
