@@ -6,6 +6,11 @@
 #include "fun.h"
 
 
+ASSET(assets_fun_txt);
+ASSET(pokemon_pal_bin);
+ASSET(pokemon_img_bin);
+
+
 game_t game;
 
 
@@ -48,8 +53,11 @@ void gameReset()
 		((u16*) SCREEN_BASE_BLOCK(30))[i] = (rand() & 0xf) | CHAR_PALETTE(0);
 	
 	// Set up sprite
-	RLUnCompVram((void*) &_binary_pokemon_pal_bin_start, OBJ_COLORS);
-	RLUnCompVram((void*) &_binary_pokemon_img_bin_start, SPRITE_GFX);
+	for (u16 i = 0; i < ASSET_SIZE(pokemon_pal_bin) / 2; i++)
+		OBJ_COLORS[i] = ((u16*) ASSET_START(pokemon_pal_bin))[i];
+	
+	for (u16 i = 0; i < ASSET_SIZE(pokemon_img_bin) / 2; i++)
+		SPRITE_GFX[i] = ((u16*) ASSET_START(pokemon_img_bin))[i];
 	
 	// Hide all sprites
 	for (u16 i = 0; i < 128; i++)
@@ -71,7 +79,7 @@ void gameStep()
 {
 	// Movement
 	const u16 keys = ~(REG_KEYINPUT);
-	const s8 speed = (keys & KEY_B) ? 4 : 2;
+	const s8 speed = (keys & KEY_B) ? 2 : 1;
 	s8 dx = (!!(keys & KEY_RIGHT) - !!(keys & KEY_LEFT)) * speed;
 	s8 dy = (!!(keys & KEY_DOWN) - !!(keys & KEY_UP)) * speed;
 	

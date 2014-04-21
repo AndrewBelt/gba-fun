@@ -18,7 +18,7 @@ LDFLAGS := $(ARCH) $(SPECS) \
 
 TARGET = fun.gba
 OBJCOPY_FLAGS := -O elf32-littlearm -B arm
-GRIT_FLAGS := -pT4 -gB4 -Mw4 -Mh4 -ftb -fh! -Zr
+GRIT_FLAGS := -pT4 -gB4 -Mw4 -Mh4 -ftb -fh!
 VBAM_FLAGS := --bios=../bios/gba.bin
 
 ASSETS := assets/fun.txt pokemon.pal.bin pokemon.img.bin

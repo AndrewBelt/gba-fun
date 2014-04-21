@@ -2,12 +2,10 @@
 #define ASSETS_H
 
 #define ASSET(sym) \
-  extern char _binary_##sym##_start; \
-  extern char _binary_##sym##_end; \
-  extern char _binary_##sym##_size
+  extern char _binary_##sym##_start, _binary_##sym##_end, _binary_##sym##_size
 
-ASSET(assets_fun_txt);
-ASSET(pokemon_pal_bin);
-ASSET(pokemon_img_bin);
+#define ASSET_START(sym) ((void *) &_binary_##sym##_size)
+#define ASSET_END(sym) ((void *) &_binary_##sym##_size)
+#define ASSET_SIZE(sym) ((size_t) &_binary_##sym##_size)
 
 #endif
